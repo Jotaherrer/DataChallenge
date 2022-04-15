@@ -1,12 +1,10 @@
 # %% Imports
-from tkinter.tix import Tree
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 import datetime as dt
 from pandas.tseries.offsets import Day, MonthEnd
-import math
 
 # %% Datasets
 d_rates = pd.read_csv('rates.csv')
@@ -58,6 +56,9 @@ u_grouped = d_transactions.groupby(['user_id', 'createdat'])['amount'].mean().re
 u_grouped.columns = ['t_user_id', 't_createdat', 't_amount']
 u_grouped.set_index('t_user_id', inplace=True)
 d_user.set_index('user_id', inplace=True)
-
+comb = pd.merge(u_grouped, d_user, left_index=True, right_index=True)
+comb = comb[['t_amount','t_createdat', 'createdat']]
+#comb['day_interval'] = comb['t_createdat'] - comb['createdat']
+comb['t_interval'] = comb.apply(lambda row: row, axis=1)
 
 # %%
