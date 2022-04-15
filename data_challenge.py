@@ -26,6 +26,7 @@ d_transactions['createdat'] = d_transactions['createdat'].apply(lambda row: np.d
 d_rates.columns = ['currency', 'quote_currency', 'price']
 especies = d_rates.currency.unique()
 len_rates = len(d_rates)
+curr_dist = d_transactions.groupby('currency')['id'].count().reset_index()
 
 # Conversion values to USD
 quotes = []
@@ -49,6 +50,7 @@ for i, v in d_rates.iterrows():
 
     elif v.values[0] == 'USDC':
         quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+        quotes.append(['ARS', 'ARS', 1/200, 1/200])
 
     elif v.values[0] == 'UNI':
         if v.values[1] == 'BTC':
@@ -133,16 +135,28 @@ for i, v in d_rates.iterrows():
 new_rates = pd.DataFrame(quotes, columns=['currency', 'quote_curr', 'base_price', 'usd_price'])
 
 # Convert transaction amounts
-t_test = d_transactions[['id', 'user_id', 'amount', 'currency', 'createdat']]
+d_transactions.currency.replace('MONEY', 'ARS', inplace=True)
+d_transactions.currency.replace('DAI', 'USDT', inplace=True)
+
+curr_dist = d_transactions.groupby('currency')['id'].count().reset_index()
+curr_dist.sort_values('currency', inplace=True)
+
+#t_test = d_transactions[['id', 'user_id', 'amount', 'currency', 'createdat']]
 t_rates = new_rates[['currency', 'usd_price']]
-new_row = {'currency': 'MONEY', 'usd_price': 1/200}
-t_rates.append(new_row, ignore_index=True)
+t_rates.drop_duplicates(subset='currency', inplace=True)
+curr_dist_rates = t_rates['currency'].drop_duplicates().reset_index(drop=True)
+curr_dist_rates = pd.DataFrame(curr_dist_rates)
+curr_dist_rates.sort_values('currency', inplace=True)
 
-t_test.set_index('currency', inplace=True)
+d_transactions.set_index('currency', inplace=True)
 t_rates.set_index('currency', inplace=True)
+d_transactions_dummy = d_transactions
 
-pd.merge(t_test, t_rates, left_index=True, right_index=True)
-pd.concat([t_test, t_rates], axis=1)
+t_comb = pd.merge(d_transactions, t_rates, left_index=True, right_index=True)
+t_comb.reset_index(inplace=True)
+t_comb['t_value_usd'] = t_comb['amount'] * t_comb['usd_price']
+d_transactions = t_comb
+d_transactions.sort_values('createdat', inplace=True)
 
 
 # %% Exploratory data for Users Dataset
@@ -161,12 +175,12 @@ plt.ylim(0,700)
 
 
 # %% Exploratory data for transactions Dataset
-t_per_month = d_transactions.groupby("createdat")['amount'].sum().reset_index()
+t_per_month = d_transactions.groupby("createdat")['t_value_usd'].sum().reset_index()
 t_stats = t_per_month.describe()
 
 # Operated volume per date
 fig = plt.figure(figsize=(10,8))
-plt.bar(t_per_month['createdat'], t_per_month['amount'])
+plt.bar(t_per_month['createdat'], t_per_month['t_value_usd'])
 
 # %% Transacted volume 25D moving average
 t_per_month.rolling(25, min_periods=10).mean().plot()
@@ -175,12 +189,12 @@ t_per_month.rolling(25, min_periods=10).mean().plot()
 
 
 # %% LTV / Churning
-u_grouped = d_transactions.groupby(['user_id', 'createdat'])['amount'].mean().reset_index()
-u_grouped.columns = ['t_user_id', 't_createdat', 't_amount']
+u_grouped = d_transactions.groupby(['user_id', 'createdat'])['t_value_usd'].mean().reset_index()
+u_grouped.columns = ['t_user_id', 't_createdat', 't_amount_usd']
 u_grouped.set_index('t_user_id', inplace=True)
 d_user.set_index('user_id', inplace=True)
 comb = pd.merge(u_grouped, d_user, left_index=True, right_index=True)
-comb = comb[['t_amount','t_createdat', 'createdat']]
+comb = comb[['t_amount_usd','t_createdat', 'createdat']]
 #comb['day_interval'] = comb['t_createdat'] - comb['createdat']
 comb['t_interval'] = comb.apply(lambda row: row, axis=1)
 
