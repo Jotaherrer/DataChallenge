@@ -22,6 +22,129 @@ d_transactions['createdat'] = pd.to_datetime(d_user['createdat'])
 d_user['createdat'] = d_user['createdat'].apply(lambda row: np.datetime64(row, 'D'))
 d_transactions['createdat'] = d_transactions['createdat'].apply(lambda row: np.datetime64(row, 'D'))
 
+# %% Rates conversion
+d_rates.columns = ['currency', 'quote_currency', 'price']
+especies = d_rates.currency.unique()
+len_rates = len(d_rates)
+
+# Conversion values to USD
+quotes = []
+btc, eth = float(42670), float(3236.38)
+
+for i, v in d_rates.iterrows():
+    if (v.values[0] == 'UST'):
+        if v.values[1] == 'USDT':
+            val = float(v.values[2])
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'BTC':
+            val = float(v.values[2] * btc)
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+
+    elif v.values[0] == 'SAND':
+        if v.values[1] == 'BTC':
+            val = v.values[2] * btc
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'USDT':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+
+    elif v.values[0] == 'USDC':
+        quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+
+    elif v.values[0] == 'UNI':
+        if v.values[1] == 'BTC':
+            val = v.values[2] * btc
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'USDT':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+
+    elif v.values[0] == 'ADA':
+        if v.values[1] == 'ETH':
+            val = v.values[2] * eth
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'BTC':
+            val = v.values[2] * btc
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'USDT':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+        elif v.values[1] == 'USDC':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+
+    elif v.values[0] == 'LUNA':
+        if v.values[1] == 'ETH':
+            val = v.values[2] * eth
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'BTC':
+            val = v.values[2] * btc
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'USDT':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+        elif v.values[1] == 'UST':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+
+    elif v.values[0] == 'SOL':
+        if v.values[1] == 'ETH':
+            val = v.values[2] * eth
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'BTC':
+            val = v.values[2] * btc
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'USDT':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+        elif v.values[1] == 'USDC':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+
+    elif v.values[0] == 'ETH':
+        if v.values[1] == 'USDC':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+        elif v.values[1] == 'BTC':
+            val = v.values[2] * btc
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'USDT':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+        elif v.values[1] == 'UST':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+        elif v.values[1] == 'DAI':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+
+    elif v.values[0] == 'SLP':
+        if v.values[1] == 'ETH':
+            val = v.values[2] * eth
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'USDT':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+
+    elif (v.values[0] == 'DOT') or (v.values[0] == 'AXS') or (v.values[0] == 'MANA') or (v.values[0] == 'ALGO'):
+        if v.values[1] == 'ETH':
+            val = v.values[2] * eth
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'BTC':
+            val = v.values[2] * btc
+            quotes.append([v.values[0], v.values[1], v.values[2], val])
+        elif v.values[1] == 'USDT':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+
+    elif v.values[0] == 'USDT':
+        if v.values[1] == 'DAI':
+            quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+
+    else:
+        quotes.append([v.values[0], v.values[1], v.values[2], v.values[2]])
+
+new_rates = pd.DataFrame(quotes, columns=['currency', 'quote_curr', 'base_price', 'usd_price'])
+
+# Convert transaction amounts
+t_test = d_transactions[['id', 'user_id', 'amount', 'currency', 'createdat']]
+t_rates = new_rates[['currency', 'usd_price']]
+new_row = {'currency': 'MONEY', 'usd_price': 1/200}
+t_rates.append(new_row, ignore_index=True)
+
+t_test.set_index('currency', inplace=True)
+t_rates.set_index('currency', inplace=True)
+
+pd.merge(t_test, t_rates, left_index=True, right_index=True)
+pd.concat([t_test, t_rates], axis=1)
+
+
 # %% Exploratory data for Users Dataset
 # User distribution by gender
 n_users = d_user['gender'].value_counts().values
