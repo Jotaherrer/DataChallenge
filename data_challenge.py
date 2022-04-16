@@ -143,7 +143,7 @@ for i, v in d_rates.iterrows():
 
 new_rates = pd.DataFrame(quotes, columns=['currency', 'quote_curr', 'base_price', 'usd_price'])
 
-# Convert transaction amounts
+# %% Convert transaction amounts
 d_transactions.currency.replace('MONEY', 'ARS', inplace=True)
 d_transactions.currency.replace('DAI', 'USDT', inplace=True)
 
@@ -166,7 +166,7 @@ t_comb['t_value_usd'] = t_comb['amount'] * t_comb['usd_price']
 d_transactions = t_comb
 d_transactions.sort_values('createdat', inplace=True)
 
-# Add revenue from amounts transacted
+# %% Add revenue from amounts transacted
 revenue = []
 
 for i, v in d_transactions.iterrows():
@@ -242,12 +242,25 @@ for i, v in comb.iterrows():
     maturity.append(intervalo)
 
 comb['maturity'] = [round(x/30, 0) for x in maturity]
+comb_n = comb.groupby(comb['t_createdat'].dt.to_period("M"))['revenue', 'index'].count().reset_index()
+piv_table = comb.pivot_table(index='t_createdat', columns='index', values='revenue', fill_value=0).sort_index(ascending=True)
+total_rev, total_users = sum(comb['revenue'])
 
-t_per_month = comb.groupby(comb['t_createdat'].dt.to_period("D"))[['index','revenue','maturity']].count().reset_index()
-t_per_month = pd.DataFrame(t_per_month)
+piv_dates = []
+piv_rev_per_day = []
+active_users_per_day = []
+for i, v in piv_table.iterrows():
+    rev_per_day = sum(v.values)
+    piv_rev_per_day.append(rev_per_day)
+    piv_dates.append(i)
+    act_users = np.count_nonzero(v.values)
+    active_users_per_day.append(act_users)
 
-comb.pivot(index='t_createdat', columns='maturity', values='index').sort_index(ascending=True)
-
+df_dates, df_rev, df_users = pd.DataFrame(piv_dates), pd.DataFrame(piv_rev_per_day), pd.DataFrame(active_users_per_day)
+comb_per_day = pd.concat([df_dates, df_rev, df_users], axis=1)
+comb_per_day.columns = ['date', 'rev', 'users']
+comb_per_day_grouped = comb_per_day.groupby(comb_per_day['date'].dt.to_period('M'))['rev', 'users'].sum()
+comb_per_day_grouped['ARPU'] = comb_per_day_grouped['rev']/comb_per_day_grouped['users']
 
 # %% Stats per user
 rank_users = comb.groupby('index')['t_createdat'].count().reset_index()
