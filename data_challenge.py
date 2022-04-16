@@ -16,11 +16,20 @@ d_rates.dtypes
 d_user.dtypes
 d_transactions.dtypes
 
-d_user['createdat'] = pd.to_datetime(d_user['createdat'])
-d_transactions['createdat'] = pd.to_datetime(d_user['createdat'])
+# Mod dates format
+t_dates = []
+for i, v in d_transactions.iterrows():
+    str_date = v.values[7][:10]
+    n_date = dt.datetime.strptime(str_date, '%Y-%m-%d')
+    t_dates.append(n_date)
+d_transactions['createdat'] = t_dates
 
-d_user['createdat'] = d_user['createdat'].apply(lambda row: np.datetime64(row, 'D'))
-d_transactions['createdat'] = d_transactions['createdat'].apply(lambda row: np.datetime64(row, 'D'))
+d_dates = []
+for i, v in d_user.iterrows():
+    str_date = v.values[3][:10]
+    n_date = dt.datetime.strptime(str_date, '%Y-%m-%d')
+    d_dates.append(n_date)
+d_user['createdat'] = d_dates
 
 # %% Rates conversion
 d_rates.columns = ['currency', 'quote_currency', 'price']
@@ -176,9 +185,15 @@ for i, v in d_transactions.iterrows():
         else:
             val_com = 0
             revenue.append(val_com)
+    else:
+        val_com = 0
+        revenue.append(val_com)
 
-    print(i)
-    print(v)
+d_transactions['revenue'] = revenue
+
+
+
+
 
 
 # %% Exploratory data for Users Dataset
@@ -195,7 +210,6 @@ fig = plt.figure(figsize=(10,8))
 plt.bar(u_per_day['createdat'], u_per_day['gender'])
 plt.ylim(0,700)
 
-
 # %% Exploratory data for transactions Dataset
 t_per_month = d_transactions.groupby("createdat")['t_value_usd'].sum().reset_index()
 t_stats = t_per_month.describe()
@@ -204,27 +218,35 @@ t_stats = t_per_month.describe()
 fig = plt.figure(figsize=(10,8))
 plt.bar(t_per_month['createdat'], t_per_month['t_value_usd'])
 
-# %% Transacted volume 25D moving average
+# Transacted volume 25D moving average
 t_per_month.rolling(25, min_periods=10).mean().plot()
 
+
+
+
+
 # %% LTV / Churning
-u_grouped = d_transactions.groupby(['user_id', 'createdat'])['t_value_usd'].sum().reset_index()
-u_grouped.columns = ['t_user_id', 't_createdat', 't_amount_usd']
+u_grouped = d_transactions.groupby(['user_id', 'createdat'])['revenue'].sum().reset_index()
+u_grouped.columns = ['t_user_id', 't_createdat', 'revenue']
 u_grouped.set_index('t_user_id', inplace=True)
 
 d_user.set_index('user_id', inplace=True)
 comb = pd.merge(u_grouped, d_user, left_index=True, right_index=True)
-comb = comb[['t_amount_usd','t_createdat', 'createdat']]
+comb = comb[['revenue','t_createdat', 'createdat']]
 comb.reset_index(inplace=True)
 comb.sort_values(['index', 't_createdat'], inplace=True)
-comb.sort_values('t_createdat')
 
-t_per_month = comb.groupby(comb['t_createdat'].dt.to_period("M"))['index'].count()
+maturity = []
+for i, v in comb.iterrows():
+    intervalo = int((v.values[2] - v.values[3]).components.days)
+    maturity.append(intervalo)
+
+comb['maturity'] = [round(x/30, 0) for x in maturity]
+
+t_per_month = comb.groupby(comb['t_createdat'].dt.to_period("D"))[['index','revenue','maturity']].count().reset_index()
 t_per_month = pd.DataFrame(t_per_month)
-t_per_month['maturity'] = range(len(t_per_month))
-t_per_month.reset_index(drop=False, inplace=True)
-t_per_month.pivot(index='t_createdat', columns='maturity', values='index').sort_index(ascending=True)
 
+comb.pivot(index='t_createdat', columns='maturity', values='index').sort_index(ascending=True)
 
 
 # %% Stats per user
