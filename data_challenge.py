@@ -141,7 +141,6 @@ d_transactions.currency.replace('DAI', 'USDT', inplace=True)
 curr_dist = d_transactions.groupby('currency')['id'].count().reset_index()
 curr_dist.sort_values('currency', inplace=True)
 
-#t_test = d_transactions[['id', 'user_id', 'amount', 'currency', 'createdat']]
 t_rates = new_rates[['currency', 'usd_price']]
 t_rates.drop_duplicates(subset='currency', inplace=True)
 curr_dist_rates = t_rates['currency'].drop_duplicates().reset_index(drop=True)
@@ -157,6 +156,29 @@ t_comb.reset_index(inplace=True)
 t_comb['t_value_usd'] = t_comb['amount'] * t_comb['usd_price']
 d_transactions = t_comb
 d_transactions.sort_values('createdat', inplace=True)
+
+# Add revenue from amounts transacted
+revenue = []
+
+for i, v in d_transactions.iterrows():
+    tran_type = v.values[6]
+    status = v.values[4]
+    if status == 'DONE':
+        if tran_type == 'CRYPTO_SWAP':
+            val_com = v.values[9] * 0.01
+            revenue.append(val_com)
+        elif (tran_type == 'CRYPTO_SALE') or (tran_type == 'CRYPTO_PURCHASE'):
+            val_com = v.values[9] * 0.02
+            revenue.append(val_com)
+        elif (tran_type == 'LEMON_CARD_PAYMENT'):
+            val_com = v.values[9] * 0.05
+            revenue.append(val_com)
+        else:
+            val_com = 0
+            revenue.append(val_com)
+
+    print(i)
+    print(v)
 
 
 # %% Exploratory data for Users Dataset
@@ -185,17 +207,35 @@ plt.bar(t_per_month['createdat'], t_per_month['t_value_usd'])
 # %% Transacted volume 25D moving average
 t_per_month.rolling(25, min_periods=10).mean().plot()
 
-# Stationality in volume?
-
-
 # %% LTV / Churning
-u_grouped = d_transactions.groupby(['user_id', 'createdat'])['t_value_usd'].mean().reset_index()
+u_grouped = d_transactions.groupby(['user_id', 'createdat'])['t_value_usd'].sum().reset_index()
 u_grouped.columns = ['t_user_id', 't_createdat', 't_amount_usd']
 u_grouped.set_index('t_user_id', inplace=True)
+
 d_user.set_index('user_id', inplace=True)
 comb = pd.merge(u_grouped, d_user, left_index=True, right_index=True)
 comb = comb[['t_amount_usd','t_createdat', 'createdat']]
-#comb['day_interval'] = comb['t_createdat'] - comb['createdat']
-comb['t_interval'] = comb.apply(lambda row: row, axis=1)
+comb.reset_index(inplace=True)
+comb.sort_values(['index', 't_createdat'], inplace=True)
+comb.sort_values('t_createdat')
 
-# %%
+t_per_month = comb.groupby(comb['t_createdat'].dt.to_period("M"))['index'].count()
+t_per_month = pd.DataFrame(t_per_month)
+t_per_month['maturity'] = range(len(t_per_month))
+t_per_month.reset_index(drop=False, inplace=True)
+t_per_month.pivot(index='t_createdat', columns='maturity', values='index').sort_index(ascending=True)
+
+
+
+# %% Stats per user
+rank_users = comb.groupby('index')['t_createdat'].count().reset_index()
+rank_users = rank_users.sort_values('t_createdat', ascending=False)
+
+rank_test = comb[comb['index'] == rank_users['index'].values[0]]
+rank_test_month = rank_test.groupby(rank_test['t_createdat'].dt.to_period("M"))['index'].count()
+rango = pd.date_range(start='2019-11-01', end='2022-05-01', freq='M')
+
+#%% Groups per subscription date
+subs_groups = comb.groupby(comb['createdat'].dt.to_period("M"))['index'].count()
+subs_groups = pd.DataFrame(subs_groups)
+#plt.bar(subs_groups.index.values, subs_groups['index'].values)
