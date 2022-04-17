@@ -244,7 +244,7 @@ for i, v in comb.iterrows():
 comb['maturity'] = [round(x/30, 0) for x in maturity]
 comb_n = comb.groupby(comb['t_createdat'].dt.to_period("M"))['revenue', 'index'].count().reset_index()
 piv_table = comb.pivot_table(index='t_createdat', columns='index', values='revenue', fill_value=0).sort_index(ascending=True)
-total_rev, total_users = sum(comb['revenue'])
+total_rev = sum(comb['revenue']),
 
 piv_dates = []
 piv_rev_per_day = []
@@ -261,6 +261,15 @@ comb_per_day = pd.concat([df_dates, df_rev, df_users], axis=1)
 comb_per_day.columns = ['date', 'rev', 'users']
 comb_per_day_grouped = comb_per_day.groupby(comb_per_day['date'].dt.to_period('M'))['rev', 'users'].sum()
 comb_per_day_grouped['ARPU'] = comb_per_day_grouped['rev']/comb_per_day_grouped['users']
+
+# %% CHURN RATE
+piv_table[piv_table > 0] = 1
+piv_table['date'] = piv_table.index.values
+piv_table.reset_index(inplace=True)
+
+churn_month = piv_table.groupby(piv_table['date'].dt.to_period("M")).sum()
+churn_month[churn_month > 1] = 1
+churn_month['row_total'] = churn_month.sum(numeric_only=True, axis=1)
 
 # %% Stats per user
 rank_users = comb.groupby('index')['t_createdat'].count().reset_index()
