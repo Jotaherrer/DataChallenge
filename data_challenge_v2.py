@@ -279,7 +279,6 @@ yticklabels=t_month_list)
 plt.show()
 
 # %%
-
 churn = ((t_retention - 100) * -1)/100
 churn.round(1)
 
@@ -288,14 +287,16 @@ ltv[1] = t_avg_rev[1]
 
 # %% Create the heatmap
 plt.figure(figsize=(15,7))
-plt.title('Average Revenue by Monthly Cohorts')
+plt.title('Lifetime Value  by Monthly Cohorts')
 # Create the heatmap
-sns.heatmap(data=t_avg_rev,
+sns.heatmap(data=ltv,
 annot = True,
-cmap = "Reds",
+cmap = "Greens",
 vmin = 0.0,
-vmax = list(t_avg_rev.max().sort_values(ascending = False))[1]+3,
+vmax = list(ltv.max().sort_values(ascending = False))[1]+3,
 fmt = '.1f',
 linewidth = 0.3,
 yticklabels=t_month_list)
 plt.show()
+
+# %%
