@@ -268,18 +268,7 @@ piv_table['date'] = piv_table.index.values
 piv_table.reset_index(inplace=True)
 
 churn_month = piv_table.groupby(piv_table['date'].dt.to_period("M")).sum()
+churn_month_raw = churn_month
 churn_month[churn_month > 1] = 1
 churn_month['row_total'] = churn_month.sum(numeric_only=True, axis=1)
 
-# %% Stats per user
-rank_users = comb.groupby('index')['t_createdat'].count().reset_index()
-rank_users = rank_users.sort_values('t_createdat', ascending=False)
-
-rank_test = comb[comb['index'] == rank_users['index'].values[0]]
-rank_test_month = rank_test.groupby(rank_test['t_createdat'].dt.to_period("M"))['index'].count()
-rango = pd.date_range(start='2019-11-01', end='2022-05-01', freq='M')
-
-#%% Groups per subscription date
-subs_groups = comb.groupby(comb['createdat'].dt.to_period("M"))['index'].count()
-subs_groups = pd.DataFrame(subs_groups)
-#plt.bar(subs_groups.index.values, subs_groups['index'].values)
